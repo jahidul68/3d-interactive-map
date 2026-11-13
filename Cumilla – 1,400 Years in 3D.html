@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cumilla – 1,400 Years in 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Noto+Serif+Bengali:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#20303a;font-family:'Cormorant Garamond',Georgia,serif;color:#fff}
+  #stage{position:fixed;inset:0;background:linear-gradient(#6f97b4 0%,#a9c0c8 55%,#c8d3cc 100%)}
+  canvas#gl{display:block;width:100%;height:100%}
+  .shadow{text-shadow:0 2px 6px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.6)}
+  #year{position:fixed;top:14px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+  #year .y{font-size:clamp(46px,7.2vw,92px);font-weight:700;font-style:italic;line-height:1;letter-spacing:.5px}
+  #year .rule{width:62%;height:2px;background:rgba(255,255,255,.85);margin:6px auto 4px;position:relative}
+  #year .rule i{position:absolute;top:-3px;width:8px;height:8px;border-radius:50%;background:#fff;transform:translateX(-50%)}
+  #year .place{font-size:clamp(17px,2vw,24px);font-weight:600}
+  #year .bn{font-family:'Noto Serif Bengali',serif;font-size:clamp(13px,1.4vw,17px);opacity:.92;margin-top:1px}
+  #polity{position:fixed;top:18px;left:20px;display:flex;align-items:center;gap:12px;pointer-events:none;max-width:40vw}
+  #polity canvas{width:64px;height:42px;flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+  #polity .n{font-size:clamp(18px,2.2vw,30px);font-weight:700;line-height:1.05}
+  #polity .s{font-size:clamp(13px,1.35vw,18px);font-weight:600;opacity:.95}
+  #pop{position:fixed;top:18px;right:22px;text-align:right;pointer-events:none}
+  #pop .v{font-size:clamp(24px,3.2vw,44px);font-weight:700;display:flex;align-items:center;justify-content:flex-end;gap:10px}
+  #pop .v svg{width:clamp(14px,1.6vw,22px);height:auto}
+  #pop .l{font-size:clamp(12px,1.3vw,17px);font-weight:600}
+  #minimap{position:fixed;right:20px;bottom:86px;width:180px;height:180px;border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.85),0 4px 14px rgba(0,0,0,.45)}
+  #caption{position:fixed;left:22px;bottom:90px;max-width:min(460px,60vw);background:rgba(20,26,30,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-left:3px solid #e9c46a;padding:12px 16px 13px;border-radius:4px;opacity:0;transform:translateY(10px);transition:opacity .6s,transform .6s;pointer-events:none}
+  #caption.on{opacity:1;transform:none}
+  #caption .cy{font-size:15px;font-weight:700;color:#e9c46a;letter-spacing:.5px}
+  #caption .ct{font-size:24px;font-weight:700;line-height:1.1;margin:2px 0 4px}
+  #caption .cx{font-family:Georgia,serif;font-size:14px;line-height:1.4;opacity:.95}
+  #bar{position:fixed;left:0;right:0;bottom:0;padding:10px 16px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(transparent,rgba(10,16,20,.65) 45%)}
+  #bar button{font:600 15px 'Cormorant Garamond',serif;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:6px 13px;cursor:pointer;white-space:nowrap}
+  #bar button:hover{background:rgba(255,255,255,.26)}
+  #bar button.on{background:#e9c46a;color:#1d2a30;border-color:#e9c46a}
+  #play{width:44px;height:44px;border-radius:50%!important;padding:0!important;font-size:18px!important;display:grid;place-items:center}
+  #track{flex:1;min-width:180px;position:relative;height:34px;display:flex;align-items:center}
+  #scrub{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:34px;position:relative;z-index:2;cursor:pointer}
+  #scrub::-webkit-slider-runnable-track{height:5px;background:rgba(255,255,255,.3);border-radius:3px}
+  #scrub::-moz-range-track{height:5px;background:rgba(255,255,255,.3);border-radius:3px}
+  #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#e63946;margin-top:-5.5px;border:2px solid #fff}
+  #scrub::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#e63946;border:2px solid #fff}
+  #ticks{position:absolute;left:8px;right:8px;top:0;bottom:0;pointer-events:none}
+  #ticks span{position:absolute;top:22px;width:1px;height:7px;background:rgba(255,255,255,.55)}
+  #ticks b{position:absolute;top:-1px;font-size:11px;font-weight:600;transform:translateX(-50%);opacity:.8;white-space:nowrap}
+  #speed{display:flex;gap:4px}
+  #speed button{padding:5px 9px}
+  #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+  .lbl{position:absolute;transform:translate(-50%,-100%);font-size:14px;font-weight:700;white-space:nowrap;padding-bottom:12px;transition:opacity .4s}
+  .lbl::after{content:"";position:absolute;left:50%;bottom:0;width:2px;height:10px;background:#fff;transform:translateX(-50%);box-shadow:0 0 3px rgba(0,0,0,.6)}
+  .lbl.water{font-style:italic;color:#d8f0ff}
+  .lbl.water::after{display:none}
+  #intro,#info{position:fixed;inset:0;display:grid;place-items:center;background:rgba(12,20,26,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:10;padding:20px}
+  #intro .box,#info .box{max-width:560px;text-align:center}
+  #intro h1{font-size:clamp(40px,7vw,72px);font-style:italic;line-height:1}
+  #intro h2{font-family:'Noto Serif Bengali',serif;font-weight:500;font-size:clamp(18px,3vw,26px);margin:10px 0 14px}
+  #intro p{font-family:Georgia,serif;font-size:15px;line-height:1.5;opacity:.9;margin-bottom:22px}
+  #intro button{font:700 22px 'Cormorant Garamond',serif;padding:12px 34px;border-radius:30px;border:0;background:#e9c46a;color:#1d2a30;cursor:pointer}
+  #intro button:disabled{opacity:.5;cursor:wait}
+  #info{display:none}
+  #info .box{text-align:left;background:rgba(18,26,32,.92);padding:22px 26px;border-radius:8px;max-height:85vh;overflow:auto}
+  #info h3{font-size:26px;margin-bottom:8px}
+  #info p,#info li{font-family:Georgia,serif;font-size:14px;line-height:1.5;margin-bottom:8px;opacity:.92}
+  #info ul{padding-left:18px}
+  #info a{color:#e9c46a}
+  #info button{margin-top:8px;font:600 16px 'Cormorant Garamond',serif;padding:6px 18px;border-radius:20px;border:1px solid #fff;background:none;color:#fff;cursor:pointer}
+  @media (max-width:700px){
+    #minimap{width:112px;height:112px;bottom:130px;right:12px}
+    #polity{left:10px;top:96px;max-width:70vw}
+    #polity canvas{width:44px;height:29px}
+    #pop{top:auto;bottom:130px;right:auto;left:12px;text-align:left}
+    #pop .v{justify-content:flex-start}
+    #caption{left:10px;right:10px;max-width:none;bottom:auto;top:160px}
+    #year{top:8px}
+    #bar{padding:8px 10px 12px;gap:7px}
+    #bar button{font-size:14px;padding:5px 10px}
+    #track{order:-1;flex-basis:100%}
+  }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gl"></canvas></div>
+<div id="labels"></div>
+
+<div id="polity" class="shadow"><canvas id="emblem" width="128" height="84"></canvas><div><div class="n" id="polName">Samatata</div><div class="s" id="polSub"></div></div></div>
+<div id="year" class="shadow"><div class="y" id="yearNum">600</div><div class="rule"><i id="ruleDot"></i></div><div class="place" id="place">Lalmai–Mainamati</div><div class="bn" id="placeBn">লালমাই–ময়নামতি</div></div>
+<div id="pop" class="shadow"><div class="v"><svg viewBox="0 0 20 44" fill="#fff"><circle cx="10" cy="5" r="5"/><path d="M3 13h14v15h-3v16H6V28H3z"/></svg><span id="popNum">~ 150</span></div><div class="l" id="popLbl">Mainamati area population (estimate)</div></div>
+<canvas id="minimap" width="360" height="360"></canvas>
+<div id="caption"><div class="cy" id="capY"></div><div class="ct" id="capT"></div><div class="cx" id="capX"></div></div>
+
+<div id="bar">
+  <button id="play" title="Play / pause (space)">▶</button>
+  <div id="track"><div id="ticks"></div><input type="range" id="scrub" min="0" max="126" step="0.01" value="0"></div>
+  <div id="speed"><button data-s="0.5">½×</button><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button></div>
+  <button id="camBtn" class="on" title="Cinematic camera. Drag the scene to look around yourself.">🎥 Auto camera</button>
+  <button id="lblBtn" class="on">Labels</button>
+  <button id="infoBtn">About</button>
+</div>
+
+<div id="intro"><div class="box shadow">
+  <h1>Cumilla</h1>
+  <h2>কুমিল্লা · ১৪০০ বছরের গল্প</h2>
+  <p>A 3D timelapse from the forested Lalmai–Mainamati hills of the 7th century to today's city of nearly half a million people. Drag to look around, scroll to zoom, and use the timeline to jump to any year.</p>
+  <button id="startBtn" disabled>Building the map…</button>
+</div></div>
+
+<div id="info"><div class="box">
+  <h3>About this timelapse</h3>
+  <p>The landscape is <b>stylised</b>. The Gomti, the Lalmai–Mainamati ridge, Dharmasagar and the landmarks are in roughly the right places relative to each other, but distances are compressed and heights exaggerated. Individual buildings are generated, not surveyed.</p>
+  <p><b>Population:</b> the 2011 (339,133) and 2022 (440,233) figures are census counts for the city corporation. All earlier figures are <b>rough illustrative estimates</b> for the settlement or town of the day. The building count follows that curve.</p>
+  <p><b>Dates</b> follow the sources below. Where they disagree, the page says so. The municipality is dated 1864 by Britannica and 1890 by Wikipedia, and the Shah Shuja Mosque's builder and date are disputed. Years marked "c." are approximate.</p>
+  <ul>
+    <li><a href="https://en.wikipedia.org/wiki/Comilla" target="_blank" rel="noopener">Comilla – Wikipedia</a></li>
+    <li><a href="https://www.britannica.com/place/Comilla" target="_blank" rel="noopener">Comilla – Britannica</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/Dharmasagar_(pond)" target="_blank" rel="noopener">Dharmasagar – Wikipedia / Banglapedia</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/Shah_Shuja_Mosque" target="_blank" rel="noopener">Shah Shuja Mosque – Wikipedia</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/Comilla_District" target="_blank" rel="noopener">Comilla District – Wikipedia</a></li>
+  </ul>
+  <p>Inspired by 3D city-growth timelapses such as "Copenhagen – 3D Timelapse".</p>
+  <button id="infoClose">Close</button>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+"use strict";
+/* ================= utilities ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rnd=mulberry32(1458);
+const R=(a,b)=>a+(b-a)*rnd();
+const pick=a=>a[Math.floor(rnd()*a.length)];
+function gauss(){let u=0,v=0;while(u===0)u=rnd();v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function hash2(i,j){let h=(Math.imul(i,374761393)+Math.imul(j,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function vnoise(x,y){const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
+  const a=hash2(i,j),b=hash2(i+1,j),c=hash2(i,j+1),d=hash2(i+1,j+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y){let s=0,a=.5,f=1;for(let k=0;k<4;k++){s+=a*vnoise(x*f,y*f);f*=2.03;a*=.5;}return s/.9375;}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smooth=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
+const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+const lerp=(a,b,t)=>a+(b-a)*t;
+function segDist(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,l=dx*dx+dz*dz;let t=l?((px-ax)*dx+(pz-az)*dz)/l:0;t=clamp(t,0,1);const x=ax+t*dx-px,z=az+t*dz-pz;return Math.sqrt(x*x+z*z);}
+function polyDist(x,z,P){let m=1e9;for(let i=1;i<P.length;i++)m=Math.min(m,segDist(x,z,P[i-1][0],P[i-1][1],P[i][0],P[i][1]));return m;}
+
+/* ================= timeline & data ================= */
+const TK=[[0,600],[10,800],[22,1100],[28,1300],[36,1458],[46,1658],[54,1765],[64,1864],[80,1947],[90,1971],[112,2011],[124,2026]];
+const TOTAL=126;
+function yearAt(s){if(s<=0)return 600;for(let i=1;i<TK.length;i++)if(s<=TK[i][0]){const a=TK[i-1],b=TK[i];return a[1]+(b[1]-a[1])*(s-a[0])/(b[0]-a[0]);}return 2026;}
+function ypsAt(s){for(let i=1;i<TK.length;i++)if(s<=TK[i][0]){const a=TK[i-1],b=TK[i];return (b[1]-a[1])/(b[0]-a[0]);}return 1;}
+function sAtYear(y){for(let i=1;i<TK.length;i++)if(y<=TK[i][1]){const a=TK[i-1],b=TK[i];return a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]);}return TK[TK.length-1][0];}
+
+// population: census values for 2011 & 2022 (city corporation); everything else is a rough estimate
+const PK=[[600,150],[750,1500],[900,4000],[1050,2500],[1200,600],[1300,400],[1458,2500],[1658,5000],[1765,7000],[1864,10000],[1901,18000],[1947,40000],[1971,80000],[1991,170000],[2011,339133],[2022,440233],[2026,470000]];
+function popAt(y){if(y<=PK[0][0])return PK[0][1];for(let i=1;i<PK.length;i++)if(y<=PK[i][0]){const a=PK[i-1],b=PK[i],t=(y-a[0])/(b[0]-a[0]);return Math.exp(lerp(Math.log(a[1]),Math.log(b[1]),t));}return PK[PK.length-1][1];}
+
+const POL=[
+ {from:600,to:750,name:"Samatata",sub:"Ancient kingdom of southeast Bengal",em:"wheel"},
+ {from:750,to:930,name:"Deva dynasty",sub:"Samatata, ruled from Lalmai–Mainamati",em:"wheel"},
+ {from:930,to:1060,name:"Chandra dynasty",sub:"Kings of Harikela and Samatata",em:"wheel"},
+ {from:1060,to:1300,name:"Bengal kingdoms",sub:"After the Chandras, the hill monasteries decline",em:"crown"},
+ {from:1300,to:1440,name:"Frontier plains",sub:"Between the Bengal Sultanate and Tripura",em:"crown"},
+ {from:1440,to:1732,name:"Tripura Kingdom",sub:"Manikya dynasty",em:"crown"},
+ {from:1732,to:1765,name:"Mughal Bengal",sub:"Tripura plains under the Nawabs of Bengal",em:"crown"},
+ {from:1765,to:1858,name:"East India Company",sub:"Bengal Presidency",em:"eic"},
+ {from:1858,to:1947,name:"British Raj",sub:"Tippera District, Bengal",em:"uk"},
+ {from:1947,to:1971,name:"Pakistan",sub:"East Bengal",em:"pk"},
+ {from:1971,to:99999,name:"Bangladesh",sub:"People's Republic of Bangladesh",em:"bd"}
+];
+
+/* ================= geography ================= */
+const W=200;
+const CEN={x:3.5,z:1};
+function gomtiZ(x){return -16+3*Math.sin(x*.07+.5)+1.6*Math.sin(x*.19+1.3);}
+const oldGomti=[];for(let k=0;k<=24;k++){const a=Math.PI*k/24;oldGomti.push([1+4*Math.cos(a),-13.6+3.6*Math.sin(a)]);}
+function ridgeCX(z){return -34+2.2*Math.sin(z*.09);}
+function ridgeAmt(x,z){const env=smooth(-40,-26,z)*(1-smooth(28,40,z));const dx=(x-ridgeCX(z))/5;return env*Math.exp(-dx*dx);}
+const DS={x:3,z:-3,hw:2.3,hd:1.9}; // Dharmasagar
+function heightRaw(x,z){
+  let h=.15+.12*(fbm(x*.08,z*.08)-.5);
+  h+=ridgeAmt(x,z)*(2.2+2.2*fbm(x*.12+3,z*.12));
+  h+=smooth(44,64,x)*(1.4+3*fbm(x*.06+7,z*.06));
+  return h;
+}
+function riverInfo(x,z){const dr=Math.abs(z-gomtiZ(x));const dg=polyDist(x,z,oldGomti);return {dr,dg};}
+function height(x,z){
+  let h=heightRaw(x,z);const {dr,dg}=riverInfo(x,z);
+  h=lerp(-.6,h,smooth(.8,2.4,dr));
+  h=lerp(-.5,h,smooth(.45,1.3,dg));
+  return h;
+}
+
+/* ================= three setup ================= */
+const canvas=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setClearColor(0x000000,0);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0xb2c4c8,70,175);
+const camera=new THREE.PerspectiveCamera(38,1,.5,500);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.47;controls.minDistance=5;controls.maxDistance=120;
+const hemi=new THREE.HemisphereLight(0xdfeeff,0x4a5a30,.62);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff0d6,.95);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.bias=-.0006;sun.shadow.normalBias=.02;scene.add(sun);scene.add(sun.target);
+
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+
+const ZERO=new THREE.Matrix4().makeScale(0,0,0);
+const M=new THREE.Matrix4(),TP=new THREE.Vector3(),TS=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0),COL=new THREE.Color();
+
+/* ================= world generation ================= */
+let lots=[],trees=[],ponds=[],roads=[],landmarks=[],labels=[];
+let bodies,roofs,treeMesh,pondMesh;
+
+function buildTerrain(){
+  const seg=300;const g=new THREE.PlaneGeometry(W,W,seg,seg);g.rotateX(-Math.PI/2);
+  const p=g.attributes.position;const col=new Float32Array(p.count*3);
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),z=p.getZ(i);const h=height(x,z);p.setY(i,h);
+    const {dr,dg}=riverInfo(x,z);
+    const gn=fbm(x*.15+11,z*.15),fld=fbm(x*.45,z*.45);
+    let r=.45,gg=.56,b=.24;const k=.82+.32*gn;r*=k;gg*=k;b*=k;
+    const pf=smooth(.52,.6,fld);r=lerp(r,.63,pf*.6);gg=lerp(gg,.67,pf*.6);b=lerp(b,.32,pf*.6);
+    const rs=smooth(.8,2.8,h)*.45;r=lerp(r,.58,rs);gg=lerp(gg,.43,rs);b=lerp(b,.26,rs);
+    const sand=(1-smooth(2.4,3.6,dr))*smooth(1.2,2.2,dr);r=lerp(r,.72,sand*.7);gg=lerp(gg,.66,sand*.7);b=lerp(b,.48,sand*.7);
+    if(h<-.05){r=.28;gg=.32;b=.24;}
+    col[i*3]=r;col[i*3+1]=gg;col[i*3+2]=b;
+  }
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true}));m.receiveShadow=true;scene.add(m);
+  const wg=new THREE.PlaneGeometry(W,W);wg.rotateX(-Math.PI/2);
+  const water=new THREE.Mesh(wg,new THREE.MeshPhongMaterial({color:0x2f6f8c,shininess:70,specular:0x557788}));water.position.y=-.12;water.receiveShadow=true;scene.add(water);
+}
+
+/* ---------- roads ---------- */
+const ROADS=[
+ {pts:[[CEN.x,CEN.z],[6.2,-2],[6,-8],[6.5,-18],[7,-40]],year:1460,w:.28},
+ {pts:[[CEN.x,CEN.z],[15,-1],[30,-4],[48,-6],[95,-8]],year:1480,w:.28},
+ {pts:[[CEN.x,CEN.z],[-6,1.5],[-15,1],[-27,.5]],year:1500,w:.28},
+ {pts:[[CEN.x,CEN.z],[-1,-1],[-8,-9],[-22,-20],[-48,-34],[-95,-48]],year:1550,w:.32},
+ {pts:[[6,-6],[1.6,-7.3]],year:1660,w:.18},
+ {pts:[[CEN.x,CEN.z],[4,12],[2.5,30],[1,60],[0,95]],year:1700,w:.28},
+ {pts:[[CEN.x,CEN.z],[-5,9],[-17,22],[-30,40],[-50,85]],year:1800,w:.24},
+ {pts:[[CEN.x,CEN.z],[13,9],[25,24],[42,52],[60,95]],year:1850,w:.24},
+ {pts:[[CEN.x,CEN.z],[13,-8],[22,-22],[35,-50],[50,-95]],year:1905,w:.24},
+ {arc:{r:9},year:1930,w:.22},
+ {pts:[[-15,1],[-26,-1],[-28.3,8],[-28.6,14]],year:1959,w:.22},
+ {pts:[[-24,-95],[-19,-40],[-15,-12],[-13,10],[-9,35],[-4,95]],year:1965,w:.5},
+ {arc:{r:16},year:1995,w:.26},
+ {pts:[[9,-95],[8.6,-30],[8.3,0],[8.8,25],[10,95]],year:1895,w:.2,rail:true}
+];
+let roadHash=new Map();
+function rkey(ix,iz){return ix*10007+iz;}
+function resample(pts,step){const out=[];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];const L=Math.hypot(b[0]-a[0],b[1]-a[1]);const n=Math.max(1,Math.ceil(L/step));for(let k=(i===1?0:1);k<=n;k++){const t=k/n;out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}}return out;}
+function buildRoads(){
+  for(const r of ROADS){
+    let pts=r.pts;
+    if(r.arc){pts=[];for(let k=0;k<=48;k++){const a=k/48*Math.PI;pts.push([3+r.arc.r*Math.cos(a),-1+r.arc.r*.85*Math.sin(a)]);}}
+    const P=resample(pts,.35);r.P=P;
+    let cum=[0];for(let i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));r.len=cum[cum.length-1];r.cum=cum;
+    const pos=[],idx=[];
+    for(let i=0;i<P.length;i++){
+      const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)];let dx=b[0]-a[0],dz=b[1]-a[1];const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+      const nx=-dz*r.w/2,nz=dx*r.w/2;const x=P[i][0],z=P[i][1];
+      const y1=Math.max(height(x+nx,z+nz),.1)+.035,y2=Math.max(height(x-nx,z-nz),.1)+.035;
+      pos.push(x+nx,y1,z+nz,x-nx,y2,z-nz);
+      if(i>0){const o=(i-1)*2;idx.push(o,o+1,o+2,o+1,o+3,o+2);}
+      const ix=Math.floor(x),iz=Math.floor(z),k=rkey(ix,iz);if(!roadHash.has(k))roadHash.set(k,[]);roadHash.get(k).push({x,z,year:r.year,w:r.w});
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+    r.nIdx=idx.length;
+    r.mat=new THREE.MeshLambertMaterial({color:r.rail?0x3a2c24:0xa89470,polygonOffset:true,polygonOffsetFactor:-2});
+    r.mesh=new THREE.Mesh(g,r.mat);r.mesh.receiveShadow=true;r.mesh.frustumCulled=false;g.setDrawRange(0,0);scene.add(r.mesh);
+    r.span=r.year<1900?25:6;
+  }
+}
+function nearRoad(x,z,extra){const ix=Math.floor(x),iz=Math.floor(z);let best=null;
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=roadHash.get(rkey(ix+a,iz+b));if(!L)continue;for(const p of L){const d=Math.hypot(p.x-x,p.z-z);if(d<p.w/2+extra&&(!best||p.year<best.year))best=p;}}
+  return best;}
+
+/* ---------- landmarks (positions only first, for blocking) ---------- */
+const LM={
+  shalban:{x:ridgeCX(6)+2.6,z:6,r:3.2},
+  mosque:{x:1.2,z:-8.4,r:1.5},
+  townhall:{x:5.6,z:4.2,r:1.2},
+  college:{x:12,z:2.6,r:2},
+  station:{x:9.9,z:-2.6,r:1.3},
+  cemetery:{x:-26,z:-11,r:2.6},
+  bard:{x:-24.5,z:-4.5,r:2.8},
+  univ:{x:-25,z:13,r:3.4}
+};
+
+function blocked(x,z,rad){
+  const {dr,dg}=riverInfo(x,z);if(dr<2.3+rad||dg<1.4+rad)return true;
+  if(Math.abs(x-DS.x)<DS.hw+.5+rad&&Math.abs(z-DS.z)<DS.hd+.5+rad)return true;
+  for(const k in LM){const l=LM[k];if(Math.hypot(x-l.x,z-l.z)<l.r+rad)return true;}
+  for(const p of ponds){if(Math.abs(x-p.x)<p.w/2+.35+rad&&Math.abs(z-p.z)<p.d/2+.35+rad)return true;}
+  if(nearRoad(x,z,rad+.12))return true;
+  return false;
+}
+
+/* ---------- ponds (Comilla is famous for its many tanks) ---------- */
+function buildPonds(){
+  let tries=0;
+  while(ponds.length<170&&tries<6000){tries++;
+    let x,z;if(rnd()<.55){x=CEN.x+gauss()*13;z=CEN.z+gauss()*13;}else{x=R(-60,45);z=R(-60,60);}
+    const w=R(.7,1.6),d=R(.7,1.5);
+    if(heightRaw(x,z)>.55)continue;const {dr,dg}=riverInfo(x,z);if(dr<3.5||dg<2)continue;
+    if(Math.abs(x-DS.x)<DS.hw+2&&Math.abs(z-DS.z)<DS.hd+2)continue;
+    let ok=true;for(const p of ponds)if(Math.abs(x-p.x)<(w+p.w)/2+1.2&&Math.abs(z-p.z)<(d+p.d)/2+1.2){ok=false;break;}
+    for(const k in LM){const l=LM[k];if(Math.hypot(x-l.x,z-l.z)<l.r+1.5)ok=false;}
+    if(!ok)continue;
+    const dc=Math.hypot(x-CEN.x,z-CEN.z);
+    ponds.push({x,z,w,d,y:height(x,z),year:dc<16?R(1480,1960):R(1000,1990),rot:R(-.3,.3)});
+  }
+  const geo=new THREE.BoxGeometry(1,1,1);
+  pondMesh=new THREE.InstancedMesh(geo,new THREE.MeshPhongMaterial({color:0x4a8293,shininess:60}),ponds.length);
+  pondMesh.frustumCulled=false;pondMesh.receiveShadow=true;
+  ponds.forEach((p,i)=>{p.q=new THREE.Quaternion().setFromAxisAngle(UP,p.rot);p.g=-1;pondMesh.setMatrixAt(i,ZERO);});
+  scene.add(pondMesh);
+}
+
+/* ---------- building styles ---------- */
+function jit(c,a){return [clamp(c[0]+R(-a,a),0,1),clamp(c[1]+R(-a,a),0,1),clamp(c[2]+R(-a,a),0,1)];}
+const MODERN=[[.94,.91,.83],[.91,.79,.73],[.79,.85,.89],[.96,.94,.91],[.89,.85,.67],[.81,.87,.77],[.93,.86,.78],[.86,.86,.86]];
+function makeStage(style,y,L,extra){
+  const s={y,style,w:L.w,d:L.d,h:.3,rh:0,wall:[.5,.4,.3],roof:[.6,.5,.3]};
+  switch(style){
+    case'hut':s.h=.3;s.rh=.28;s.w*=.9;s.d*=.85;s.wall=jit([.52,.4,.28],.04);s.roof=jit([.64,.53,.3],.05);break;
+    case'tin':s.h=.34;s.rh=.16;s.wall=jit(rnd()<.5?[.55,.45,.35]:[.62,.6,.55],.04);s.roof=rnd()<.2?jit([.55,.36,.26],.04):jit([.72,.74,.76],.05);break;
+    case'colonial':s.h=.55;s.rh=.2;s.w*=1.25;s.d*=1.15;s.wall=jit(pick([[.93,.88,.75],[.86,.72,.47],[.9,.8,.62]]),.03);s.roof=jit([.62,.24,.16],.04);break;
+    case'concrete':s.h=rnd()<.5?.45:.8;s.w*=1.1;s.d*=1.1;s.wall=jit(pick([[.82,.8,.74],[.75,.74,.7],[.85,.82,.72]]),.03);s.roof=s.wall;break;
+    case'modern':{const f=extra||3;s.h=.3*f;s.w*=1.22;s.d*=1.22;s.wall=jit(pick(MODERN),.03);s.roof=s.wall;break;}
+    case'monastic':s.h=.38;s.wall=jit([.64,.33,.22],.04);s.roof=s.wall;break;
+    case'ruin':s.h=.1;s.w*=1.1;s.d*=1.1;s.wall=jit([.5,.32,.24],.03);s.roof=s.wall;break;
+  }
+  return s;
+}
+
+/* ---------- lots ---------- */
+let lotHash=new Map();
+function lotFree(x,z,minD){const ix=Math.floor(x/.7),iz=Math.floor(z/.7);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=lotHash.get(rkey(ix+a,iz+b));if(!L)continue;for(const o of L)if(Math.hypot(o.x-x,o.z-z)<minD)return false;}return true;}
+function addLot(L){const k=rkey(Math.floor(L.x/.7),Math.floor(L.z/.7));if(!lotHash.has(k))lotHash.set(k,[]);lotHash.get(k).push(L);
+  const hw=L.w*.7,hd=L.d*.7;L.y0=Math.min(height(L.x-hw,L.z-hd),height(L.x+hw,L.z-hd),height(L.x-hw,L.z+hd),height(L.x+hw,L.z+hd),height(L.x,L.z));
+  L.q=new THREE.Quaternion().setFromAxisAngle(UP,L.rot);L.k=-2;L.g=-1;lots.push(L);}
+
+function buildLots(){
+  // --- monastic settlement on the ridge (7th–12th c.)
+  const muras=[[ridgeCX(-22)+1,-22],[ridgeCX(-12)+1.5,-12],[ridgeCX(-3)+1,-3],[LM.shalban.x,LM.shalban.z],[ridgeCX(16)+1,16],[ridgeCX(24)+.5,24]];
+  for(const m of muras){for(let n=0;n<34;n++){const x=m[0]+gauss()*1.4,z=m[1]+gauss()*1.4;
+    if(Math.hypot(x-LM.shalban.x,z-LM.shalban.z)<LM.shalban.r)continue;if(!lotFree(x,z,.62))continue;if(blocked(x,z,.2))continue;
+    const L={x,z,w:R(.32,.5),d:R(.32,.5),rot:R(-.2,.2),group:'mon'};
+    const b=R(690,900);L.stages=[makeStage('monastic',b,L),makeStage('ruin',R(1090,1240),L)];L.birth=b;addLot(L);}}
+  // --- city lots
+  const city=[];const roadList=ROADS.filter(r=>!r.rail);
+  let att=0;
+  while(city.length<8600&&att<90000){att++;
+    let x,z,rot,d,minY=1300;
+    if(rnd()<.56){const r=roadList[Math.floor(rnd()*roadList.length)];
+      const s=Math.min(r.len*.999,-Math.log(1-rnd()*.999)*Math.min(r.len,22)/2.2);
+      let i=1;while(i<r.cum.length-1&&r.cum[i]<s)i++;const a=r.P[i-1],b=r.P[i];let dx=b[0]-a[0],dz=b[1]-a[1];const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+      const side=rnd()<.5?-1:1,off=r.w/2+.42+Math.abs(gauss())*1.1;x=a[0]+(-dz)*off*side;z=a[1]+dx*off*side;rot=Math.atan2(dx,dz);
+      const startD=r.pts?Math.hypot(r.pts[0][0]-CEN.x,r.pts[0][1]-CEN.z):r.arc.r;
+      d=startD+s+rnd()*3+Math.max(0,r.year-1450)*.08;minY=r.year+1;
+    }else{const sg=rnd()<.6?7:13;x=CEN.x+gauss()*sg;z=CEN.z+gauss()*sg*.9;rot=.12+gauss()*.25;d=Math.hypot(x-CEN.x,z-CEN.z)+rnd()*4;}
+    if(Math.abs(x)>90||Math.abs(z)>90)continue;
+    if(heightRaw(x,z)>1.1)continue;
+    if(!lotFree(x,z,.62))continue;if(blocked(x,z,.22))continue;
+    const L={x,z,w:R(.34,.52),d:R(.34,.58),rot,group:'city',dkey:d,minY};
+    city.push(L);const k=rkey(Math.floor(x/.7),Math.floor(z/.7));if(!lotHash.has(k))lotHash.set(k,[]);lotHash.get(k).push(L);
+  }
+  city.sort((a,b)=>a.dkey-b.dkey);
+  const per=popAt(2024)/city.length;let idx=0;for(let y=1300;y<=2026&&idx<city.length;y+=.25){const tgt=popAt(y)/per;while(idx<city.length&&idx+1<=tgt){city[idx].birth=y;idx++;}}
+  for(const L of city){
+    if(L.birth===undefined)continue;
+    let b=Math.max(L.birth,L.minY+R(1,8));if(b>2025.5)continue;
+    const dc=Math.hypot(L.x-CEN.x,L.z-CEN.z);const central=Math.exp(-dc/9);
+    const st=[];
+    let style=b<1780?'hut':b<1947?(rnd()<.55?'colonial':'tin'):b<1982?'concrete':'modern';
+    const floors=()=>Math.round(clamp(2+Math.pow(rnd(),1.6)*(1.5+8*central),2,11));
+    st.push(makeStage(style,b,L,floors()));
+    let last=b;
+    if(style==='hut'&&rnd()<.85){last=Math.max(last+20,R(1790,1930));st.push(makeStage(rnd()<.45?'colonial':'tin',last,L));style='tin';}
+    if((style==='tin'||style==='colonial')){
+      if(rnd()<.4){const y=Math.max(last+15,R(1950,1992));if(y<2024){st.push(makeStage('concrete',y,L));last=y;style='concrete';}}
+      if(rnd()<.5+.45*central){const y=Math.max(last+12,R(1982,2024));if(y<2025.5){st.push(makeStage('modern',y,L,floors()));last=y;style='modern';}}
+    }else if(style==='concrete'&&rnd()<.65+.3*central){const y=Math.max(last+15,R(1988,2024));if(y<2025.5)st.push(makeStage('modern',y,L,floors()));}
+    L.stages=st;addLot(L);
+  }
+  lotHash=new Map();for(const L of lots){const k=rkey(Math.floor(L.x/.7),Math.floor(L.z/.7));if(!lotHash.has(k))lotHash.set(k,[]);lotHash.get(k).push(L);}
+  // --- villages across the plain
+  let vtries=0,vcount=0;
+  while(vcount<55&&vtries<3000){vtries++;
+    const vx=R(-70,50),vz=R(-75,75);if(Math.hypot(vx-CEN.x,vz-CEN.z)<11)continue;if(heightRaw(vx,vz)>.7)continue;if(riverInfo(vx,vz).dr<4)continue;
+    vcount++;const vb=R(950,1800),n=Math.floor(R(8,22));
+    for(let k=0;k<n;k++){const x=vx+gauss()*1.7,z=vz+gauss()*1.7;if(!lotFree(x,z,.6))continue;if(blocked(x,z,.2))continue;if(heightRaw(x,z)>.9)continue;
+      const L={x,z,w:R(.32,.46),d:R(.32,.46),rot:R(-.6,.6),group:'vil'};const b=Math.min(2020,vb+Math.abs(gauss())*140);
+      L.stages=[makeStage('hut',b,L)];const ty=Math.max(b+10,R(1900,1995));if(ty<2025&&rnd()<.85)L.stages.push(makeStage('tin',ty,L));
+      if(rnd()<.22){const my=Math.max(ty+10,R(1992,2024));if(my<2025.5)L.stages.push(makeStage(rnd()<.6?'concrete':'modern',my,L,Math.floor(R(2,4))));}
+      addLot(L);}
+  }
+  for(const L of lots){L.birth=L.stages[0].y;}
+  const n=lots.length;
+  const bodyMat=new THREE.MeshLambertMaterial();const roofMat=new THREE.MeshLambertMaterial();
+  bodies=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),bodyMat,n);
+  roofs=new THREE.InstancedMesh(prismGeo(),roofMat,n);
+  for(const m of [bodies,roofs]){m.castShadow=true;m.receiveShadow=true;m.frustumCulled=false;for(let i=0;i<n;i++){m.setMatrixAt(i,ZERO);m.setColorAt(i,COL.setRGB(1,1,1));}scene.add(m);}
+}
+function prismGeo(){
+  const v=[-.5,-.5,.5, .5,-.5,.5, .5,.5,0,  -.5,-.5,.5, .5,.5,0, -.5,.5,0,
+           .5,-.5,-.5, -.5,-.5,-.5, -.5,.5,0, .5,-.5,-.5, -.5,.5,0, .5,.5,0,
+           -.5,-.5,-.5, -.5,-.5,.5, -.5,.5,0,  .5,-.5,.5, .5,-.5,-.5, .5,.5,0];
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.computeVertexNormals();return g;
+}
+
+/* ---------- trees ---------- */
+function buildTrees(){
+  const step=.95;
+  for(let x=-95;x<95;x+=step)for(let z=-95;z<95;z+=step){
+    const px=x+R(-.4,.4),pz=z+R(-.4,.4);
+    const h=height(px,pz);if(h<.02)continue;
+    const ra=ridgeAmt(px,pz),east=smooth(42,52,px),f=fbm(px*.06+20,pz*.06-5);
+    let p=f>.52?.85:f>.44?.3:.035;if(ra>.25)p=.92;if(east>.5)p=Math.max(p,.8);
+    if(rnd()>p)continue;
+    if(Math.abs(px-DS.x)<DS.hw+.3&&Math.abs(pz-DS.z)<DS.hd+.3)continue;
+    const plain=ra<.25&&east<.5;
+    const t={x:px,z:pz,y:h,s:R(.75,1.5),sy:R(.85,1.35),rot:R(0,6.28),clear:1e9,regrow:1e9,g:-1};
+    if(plain&&rnd()<.62){const dc=Math.hypot(px-CEN.x,pz-CEN.z);t.clear=lerp(1150,1960,Math.pow(rnd(),.8))+(dc<25?-120:0);}
+    if(!plain&&rnd()<.1)t.clear=R(1950,2020);
+    // lots
+    const ix=Math.floor(px/.7),iz=Math.floor(pz/.7);
+    for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){const L=lotHash.get(rkey(ix+a,iz+b));if(!L)continue;for(const o of L){if(Math.hypot(o.x-px,o.z-pz)<.95&&o.birth-1<t.clear){t.clear=o.birth-1;t.regrow=o.group==='mon'?o.stages[1].y+R(60,160):1e9;}}}
+    const rd=nearRoad(px,pz,.55);if(rd&&rd.year<t.clear){t.clear=rd.year;t.regrow=1e9;}
+    if(Math.abs(px-DS.x)<DS.hw+1.2&&Math.abs(pz-DS.z)<DS.hd+1.2)t.clear=Math.min(t.clear,1457);
+    for(const k in LM){const l=LM[k];if(Math.hypot(px-l.x,pz-l.z)<l.r+.6){t.clear=Math.min(t.clear,(l.year||1900)-1);if(k==='shalban')t.regrow=1150+R(80,200);}}
+    for(const p of ponds)if(Math.abs(px-p.x)<p.w/2+.6&&Math.abs(pz-p.z)<p.d/2+.6)t.clear=Math.min(t.clear,p.year-1);
+    t.col=[R(.12,.22),R(.25,.37),R(.09,.15)];
+    trees.push(t);
+  }
+  const geo=new THREE.IcosahedronGeometry(.55,0);geo.translate(0,.5,0);
+  treeMesh=new THREE.InstancedMesh(geo,new THREE.MeshLambertMaterial(),trees.length);
+  treeMesh.castShadow=true;treeMesh.receiveShadow=true;treeMesh.frustumCulled=false;
+  trees.forEach((t,i)=>{t.q=new THREE.Quaternion().setFromAxisAngle(UP,t.rot);treeMesh.setColorAt(i,COL.setRGB(t.col[0],t.col[1],t.col[2]));treeMesh.setMatrixAt(i,ZERO);});
+  scene.add(treeMesh);
+}
+
+/* ---------- landmark meshes ---------- */
+const mat=c=>new THREE.MeshLambertMaterial({color:c});
+function box(g,w,h,d,c,x,y,z,ry){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);if(ry)m.rotation.y=ry;m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
+function addLandmark(key,year,build,opt){
+  opt=opt||{};const l=LM[key]||opt.pos;const g=new THREE.Group();build(g);
+  g.position.set(l.x,height(l.x,l.z)-.02,l.z);if(opt.rot)g.rotation.y=opt.rot;scene.add(g);g.visible=false;
+  const o={key,year,g,ruin:opt.ruin,flat:opt.flat,span:opt.span};landmarks.push(o);if(LM[key])LM[key].year=year;return o;
+}
+function buildLandmarks(){
+  // Shalban Vihara
+  addLandmark('shalban',780,g=>{const B=0x9e4f35,D=0x7d3e2b;box(g,4.2,1.2,4.2,D,0,-.45,0);
+    box(g,3.4,.42,.45,B,0,.21,-1.5);box(g,3.4,.42,.45,B,0,.21,1.5);box(g,.45,.42,3.4,B,-1.5,.21,0);box(g,.45,.42,3.4,B,1.5,.21,0);
+    box(g,1.2,.62,.45,B,0,.31,0);box(g,.45,.62,1.2,B,0,.31,0);box(g,.6,.25,.6,B,0,.74,0);},{ruin:1150});
+  // Dharmasagar
+  {const g=new THREE.Group();
+    const bank=new THREE.Mesh(new THREE.BoxGeometry(DS.hw*2+.9,.08,DS.hd*2+.9),mat(0x6f9a4a));bank.position.y=.0;bank.receiveShadow=true;g.add(bank);
+    const w=new THREE.Mesh(new THREE.BoxGeometry(DS.hw*2,.1,DS.hd*2),new THREE.MeshPhongMaterial({color:0x3a7f99,shininess:80}));w.position.y=.04;w.receiveShadow=true;g.add(w);
+    g.position.set(DS.x,height(DS.x,DS.z)+.0,DS.z);g.visible=false;scene.add(g);landmarks.push({key:'ds',year:1458,g,flat:true,span:8});}
+  // Shah Shuja Mosque
+  addLandmark('mosque',1658,g=>{const Wt=0xf2efe6;box(g,2.4,.08,1.6,0xd9d2c0,0,.04,.3);box(g,2,.5,.8,Wt,0,.3,0);
+    const dome=(r,x)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,14,8,0,Math.PI*2,0,Math.PI/2),mat(Wt));m.position.set(x,.55,0);m.castShadow=true;g.add(m);
+      const f=new THREE.Mesh(new THREE.ConeGeometry(.05,.18,6),mat(0xd8b048));f.position.set(x,.55+r+.06,0);g.add(f);};
+    dome(.3,-.62);dome(.37,0);dome(.3,.62);
+    for(const [x,z] of [[-1.05,-.45],[1.05,-.45],[-1.05,.45],[1.05,.45]]){const c=new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,.95,8),mat(Wt));c.position.set(x,.48,z);c.castShadow=true;g.add(c);
+      const s=new THREE.Mesh(new THREE.SphereGeometry(.1,8,6),mat(Wt));s.position.set(x,1,z);g.add(s);}},{rot:.15});
+  // Town Hall
+  addLandmark('townhall',1885,g=>{box(g,1.7,.62,.85,0xc9773f,0,.31,0);box(g,1.8,.08,.95,0xf3ead8,0,.66,0);box(g,.5,.3,.5,0xf3ead8,0,.85,0);},{rot:.1});
+  // Railway station
+  addLandmark('station',1895,g=>{box(g,2.6,.06,1.0,0x8a8a86,0,.03,0);box(g,2.0,.38,.5,0xa34a36,0,.25,.15);box(g,2.2,.07,.7,0x6b6f72,0,.47,.15);},{rot:Math.PI/2});
+  // Victoria College
+  addLandmark('college',1899,g=>{const Rr=0xa8503a,T=0xf1e8d8;box(g,3,.62,.7,Rr,0,.31,-.6);box(g,.7,.62,1.8,Rr,-1.15,.31,.15);box(g,.7,.62,1.8,Rr,1.15,.31,.15);
+    box(g,3.1,.06,.8,T,0,.65,-.6);box(g,.8,.06,1.9,T,-1.15,.65,.15);box(g,.8,.06,1.9,T,1.15,.65,.15);box(g,.6,.3,.3,T,0,.8,-.6);},{rot:.08});
+  // War cemetery
+  addLandmark('cemetery',1944,g=>{box(g,4.4,.05,3.2,0x5f9c46,0,.03,0);for(let i=0;i<9;i++)for(let j=0;j<6;j++)box(g,.14,.13,.04,0xf4f2ec,-1.6+i*.4,.11,-1.1+j*.42);
+    box(g,.07,.75,.07,0xf4f2ec,0,.4,1.35);box(g,.34,.07,.07,0xf4f2ec,0,.6,1.35);},{rot:.3});
+  // BARD (Comilla Academy)
+  addLandmark('bard',1959,g=>{box(g,5,.04,4.2,0x6ea24c,0,.02,0);box(g,1.5,.42,.6,0xf0ece2,-1,.23,-1);box(g,1.2,.42,.6,0xf0ece2,1.1,.23,-.8,.4);box(g,1.6,.36,.6,0xe8dcc4,-.4,.2,1,-.2);box(g,.8,.55,.8,0xf0ece2,1.3,.3,1.1);},{rot:-.1});
+  // University
+  addLandmark('univ',2006,g=>{box(g,6,.04,5.4,0x6aa04c,0,.02,0);box(g,2.2,1.0,.8,0xe9dfc9,-1.2,.5,-1.5);box(g,1.6,.8,.8,0xb35c43,1.6,.4,-1.2);box(g,.9,1.3,.9,0xe9dfc9,1.7,.65,1.2);box(g,1.8,.7,.7,0xd9cbb0,-1.3,.35,1.4,.2);box(g,.5,.9,.12,0xb32d2d,.2,.45,.4);},{rot:.2});
+}
+
+/* ---------- labels ---------- */
+const labelsEl=document.getElementById('labels');
+function addLabel(text,x,z,year,yoff,cls,until){const el=document.createElement('div');el.className='lbl shadow'+(cls?' '+cls:'');el.textContent=text;labelsEl.appendChild(el);
+  labels.push({el,pos:new THREE.Vector3(x,Math.max(height(x,z),0)+(yoff||1.4),z),year,until:until||1e9,dyn:null});return labels[labels.length-1];}
+function buildLabels(){
+  addLabel('Gomti River',24,gomtiZ(24),600,.3,'water');
+  addLabel('Lalmai–Mainamati hills',ridgeCX(-16),-16,600,4.6);
+  const sv=addLabel('Shalban Vihara',LM.shalban.x,LM.shalban.z,780,2.2);sv.dyn=y=>y<1150?'Shalban Vihara':'Shalban Vihara (ruins)';
+  addLabel('Dharmasagar',DS.x,DS.z,1458,.9,'water');
+  addLabel('Shah Shuja Mosque',LM.mosque.x,LM.mosque.z,1658,1.6);
+  addLabel('Town Hall',LM.townhall.x,LM.townhall.z,1885,1.3);
+  addLabel('Railway station',LM.station.x,LM.station.z,1895,1.1);
+  addLabel('Victoria College',LM.college.x,LM.college.z,1899,1.4);
+  addLabel('War Cemetery',LM.cemetery.x,LM.cemetery.z,1944,1.3);
+  addLabel('BARD',LM.bard.x,LM.bard.z,1959,1.2);
+  const u=addLabel('Comilla University',LM.univ.x,LM.univ.z,2006,1.8);u.dyn=y=>y<2018?'Comilla University':'Cumilla University';
+  addLabel('Dhaka–Chattogram Highway',-14.2,-4,1965,.8);
+}
+
+/* ================= events ================= */
+const EV=[
+ {y:600,c:'c. 600',t:'The Lalmai–Mainamati ridge',x:'Low red hills rise from the Gomti plain, wrapped in forest. Samatata, an ancient kingdom of southeast Bengal, rules the land.',at:'ridge'},
+ {y:780,c:'c. 8th century',t:'Shalban Vihara',x:'Under the Deva kings a great Buddhist monastery rises on the ridge, one of many hilltop monasteries at Mainamati.',at:'shalban'},
+ {y:1060,c:'c. 1060',t:'The Chandra kings fade',x:'The Chandra dynasty, which ruled Lalmai–Mainamati in the 10th and 11th centuries, declines. The monasteries slowly empty and the forest creeps back.',at:'shalban'},
+ {y:1458,c:'1458',t:'Dharmasagar is dug',x:'Tripura king Dharma Manikya I has a huge tank dug, about 1.6 km around. It becomes the heart of the town.',at:'ds'},
+ {y:1658,c:'c. 1658',t:'Shah Shuja Mosque',x:'Three domes and four minarets on the bank of the old Gomti at Mughaltuli. Its builder and exact date are still disputed.',at:'mosque'},
+ {y:1732,c:'1732',t:"Jagat Manikya's domain",x:"Comilla becomes the centre of Jagat Manikya's domain, backed by Bengal's Nawabs.",at:'ds'},
+ {y:1765,c:'1765',t:'Company rule',x:'The East India Company takes control of Bengal’s revenues, and the plains around Comilla come under British rule.',at:'ds'},
+ {y:1790,c:'1790',t:'A district headquarters',x:'The British organise the district of Tippera, run from Comilla.',at:'ds'},
+ {y:1864,c:'1864',t:'Comilla Municipality',x:'The town becomes a municipality (Britannica gives 1864; other sources say 1890).',at:'townhall'},
+ {y:1885,c:'1885',t:'Town Hall',x:'The Town Hall (Birchandra Nagar Milanayatan) opens, a gift linked to Tripura’s Maharaja Birchandra Manikya.',at:'townhall'},
+ {y:1895,c:'c. 1895',t:'The railway arrives',x:'The Assam Bengal Railway links Comilla to Chittagong, and later to the north.',at:'station'},
+ {y:1899,c:'1899',t:'Victoria College',x:'Comilla Victoria College opens. It is the town’s oldest and best-known college.',at:'college'},
+ {y:1921,c:'1921',t:'Kazi Nazrul Islam',x:'The poet spends formative time in Comilla. Both of his wives came from this district.',at:'ds'},
+ {y:1944,c:'1940s',t:'Mainamati War Cemetery',x:'Commonwealth soldiers of the Second World War are buried beside the Mainamati cantonment.',at:'cemetery'},
+ {y:1947,c:'1947',t:'Partition',x:'British India is divided. Comilla becomes part of East Bengal, in Pakistan.',at:'ds'},
+ {y:1959,c:'1959',t:'The Comilla Academy',x:'The rural development academy (today’s BARD) is founded at Kotbari. Its "Comilla Model" of co-operatives becomes known worldwide.',at:'bard'},
+ {y:1971,c:'1971',t:'Bangladesh',x:'After the Liberation War, Comilla is part of independent Bangladesh.',at:'ds'},
+ {y:2006,c:'2006',t:'Comilla University',x:'A public university opens near the Lalmai hills.',at:'univ'},
+ {y:2011,c:'10 July 2011',t:'City Corporation',x:'The municipality becomes Comilla City Corporation. Census population: 339,133.',at:'ds'},
+ {y:2018,c:'2018',t:'Comilla becomes Cumilla',x:'The official English spelling changes to match the Bengali কুমিল্লা.',at:'ds'},
+ {y:2022,c:'2022',t:'Census: 440,233',x:'Nearly half a million people now live in the city corporation, and suburbs spread far beyond it.',at:'ds'}
+];
+function evPos(at){if(at==='ridge')return {x:ridgeCX(-4)+1,z:-4};if(at==='ds')return {x:DS.x,z:DS.z};if(at==='shalban')return LM.shalban;return LM[at];}
+
+/* ================= HUD ================= */
+const $=id=>document.getElementById(id);
+const em=$('emblem'),emx=em.getContext('2d');
+function unionJack(c,x,y,w,h){c.save();c.beginPath();c.rect(x,y,w,h);c.clip();c.fillStyle='#012169';c.fillRect(x,y,w,h);
+  c.strokeStyle='#fff';c.lineWidth=h*.2;c.beginPath();c.moveTo(x,y);c.lineTo(x+w,y+h);c.moveTo(x+w,y);c.lineTo(x,y+h);c.stroke();
+  c.strokeStyle='#C8102E';c.lineWidth=h*.07;c.stroke();
+  c.fillStyle='#fff';c.fillRect(x+w/2-h*.17,y,h*.34,h);c.fillRect(x,y+h/2-h*.17,w,h*.34);
+  c.fillStyle='#C8102E';c.fillRect(x+w/2-h*.1,y,h*.2,h);c.fillRect(x,y+h/2-h*.1,w,h*.2);c.restore();}
+function star(c,cx,cy,r){c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.42:r;c.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a));}c.closePath();c.fill();}
+function drawEmblem(kind){const c=emx,Wd=128,H=84;c.clearRect(0,0,Wd,H);
+  if(kind==='bd'){c.fillStyle='#006a4e';c.fillRect(0,0,Wd,H);c.fillStyle='#f42a41';c.beginPath();c.arc(Wd*.45,H/2,H*.3,0,7);c.fill();}
+  else if(kind==='pk'){c.fillStyle='#01411c';c.fillRect(0,0,Wd,H);c.fillStyle='#fff';c.fillRect(0,0,Wd*.25,H);
+    c.beginPath();c.arc(Wd*.62,H*.53,H*.3,0,7);c.fill();c.fillStyle='#01411c';c.beginPath();c.arc(Wd*.67,H*.45,H*.27,0,7);c.fill();c.fillStyle='#fff';star(c,Wd*.73,H*.37,H*.1);}
+  else if(kind==='uk'){unionJack(c,0,0,Wd,H);}
+  else if(kind==='eic'){for(let i=0;i<13;i++){c.fillStyle=i%2?'#fff':'#c8102e';c.fillRect(0,i*H/13,Wd,H/13+1);}unionJack(c,0,0,Wd*.46,H*.54);}
+  else{const cx=Wd/2,cy=H/2,r=H*.46;c.fillStyle='#efe2c2';c.beginPath();c.arc(cx,cy,r,0,7);c.fill();c.strokeStyle='#8a5a2b';c.lineWidth=3;c.stroke();
+    c.strokeStyle='#8a5a2b';c.fillStyle='#8a5a2b';
+    if(kind==='wheel'){c.lineWidth=3;c.beginPath();c.arc(cx,cy,r*.62,0,7);c.stroke();c.lineWidth=2.4;for(let i=0;i<8;i++){const a=i*Math.PI/4;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+r*.62*Math.cos(a),cy+r*.62*Math.sin(a));c.stroke();}c.beginPath();c.arc(cx,cy,r*.14,0,7);c.fill();}
+    else{c.beginPath();const b=cy+r*.32,t=cy-r*.36,x0=cx-r*.55,x1=cx+r*.55;c.moveTo(x0,b);c.lineTo(x0,t+r*.15);c.lineTo(cx-r*.3,cy-r*.05);c.lineTo(cx,t);c.lineTo(cx+r*.3,cy-r*.05);c.lineTo(x1,t+r*.15);c.lineTo(x1,b);c.closePath();c.fill();}}
+}
+let curPol=null;
+function fmt(n){return Math.round(n).toLocaleString('en-US');}
+function updateHUD(y){
+  const yi=Math.floor(y);$('yearNum').textContent=yi;
+  $('ruleDot').style.left=(100*(y-600)/(2026-600))+'%';
+  const p=POL.find(p=>y>=p.from&&y<p.to)||POL[POL.length-1];
+  if(p!==curPol){curPol=p;$('polName').textContent=p.name;drawEmblem(p.em);}
+  $('polSub').textContent=p.em==='pk'?(y<1956?'East Bengal':'East Pakistan'):p.sub;
+  const place=y<1300?'Lalmai–Mainamati':y<2018?'Comilla':'Cumilla';
+  $('place').textContent=place;$('placeBn').textContent=y<1300?'লালমাই–ময়নামতি':'কুমিল্লা';
+  const census=Math.abs(y-2011)<.6||Math.abs(y-2022)<.6;
+  $('popNum').textContent=(census?'':'~ ')+fmt(popAt(y));
+  $('popLbl').textContent=y<1300?'Mainamati area population (estimate)':place+' population '+(census?'(census)':'(estimate)');
+}
+
+/* ================= per-frame updates ================= */
+function updateBuildings(t,span){
+  let md=false,cd=false;
+  for(let i=0;i<lots.length;i++){const L=lots[i],S=L.stages;let k=-1;for(let j=S.length-1;j>=0;j--)if(S[j].y<=t){k=j;break;}
+    let g=0;if(k>=0)g=ease((t-S[k].y)/span);
+    if(k===L.k&&Math.abs(g-L.g)<1e-4)continue;
+    if(k!==L.k&&k>=0){const s=S[k];bodies.setColorAt(i,COL.setRGB(s.wall[0],s.wall[1],s.wall[2]));roofs.setColorAt(i,COL.setRGB(s.roof[0],s.roof[1],s.roof[2]));cd=true;}
+    L.k=k;L.g=g;md=true;
+    if(k<0||g<=0){bodies.setMatrixAt(i,ZERO);roofs.setMatrixAt(i,ZERO);continue;}
+    const s=S[k],h=s.h*g;TP.set(L.x,L.y0+h/2-.05,L.z);TS.set(s.w,h+.1,s.d);M.compose(TP,L.q,TS);bodies.setMatrixAt(i,M);
+    if(s.rh>0){const rh=s.rh*g;TP.set(L.x,L.y0+h+rh/2,L.z);TS.set(s.w*1.12,rh,s.d*1.14);M.compose(TP,L.q,TS);roofs.setMatrixAt(i,M);}else roofs.setMatrixAt(i,ZERO);
+  }
+  if(md){bodies.instanceMatrix.needsUpdate=true;roofs.instanceMatrix.needsUpdate=true;}
+  if(cd){bodies.instanceColor.needsUpdate=true;roofs.instanceColor.needsUpdate=true;}
+}
+function updateTrees(t,span){let md=false;
+  for(let i=0;i<trees.length;i++){const T=trees[i];let g;
+    if(t<T.clear)g=1;else if(t>=T.regrow)g=ease((t-T.regrow)/90);else g=1-ease((t-T.clear)/Math.max(span,2));
+    if(Math.abs(g-T.g)<1e-3)continue;T.g=g;md=true;
+    if(g<=.001){treeMesh.setMatrixAt(i,ZERO);continue;}
+    TP.set(T.x,T.y-.05,T.z);TS.set(T.s*g,T.s*T.sy*g,T.s*g);M.compose(TP,T.q,TS);treeMesh.setMatrixAt(i,M);}
+  if(md)treeMesh.instanceMatrix.needsUpdate=true;}
+function updatePonds(t,span){let md=false;
+  ponds.forEach((p,i)=>{const g=ease((t-p.year)/Math.max(span,3));if(Math.abs(g-p.g)<1e-3)return;p.g=g;md=true;
+    if(g<=.001){pondMesh.setMatrixAt(i,ZERO);return;}TP.set(p.x,p.y+.03,p.z);TS.set(p.w*g,.08,p.d*g);M.compose(TP,p.q,TS);pondMesh.setMatrixAt(i,M);});
+  if(md)pondMesh.instanceMatrix.needsUpdate=true;}
+const DIRT=new THREE.Color(0xa89470),PAVED=new THREE.Color(0x5b5b5c);
+function updateRoads(t){for(const r of ROADS){const f=clamp((t-r.year)/r.span,0,1);r.mesh.geometry.setDrawRange(0,Math.floor(f*r.nIdx/6)*6);
+  if(!r.rail){const k=r.year>=1960?1:smooth(1950,1985,t);r.mat.color.copy(DIRT).lerp(PAVED,k);}}}
+function updateLandmarks(t,span){for(const l of landmarks){const sp=l.span||Math.max(span,2);let g=ease((t-l.year)/sp);
+  l.g.visible=g>.001;if(!l.g.visible)continue;
+  if(l.flat){l.g.scale.set(g,1,g);}else{let sy=g;if(l.ruin&&t>l.ruin)sy=lerp(1,.38,ease((t-l.ruin)/60));l.g.scale.set(1,Math.max(sy,.001),1);}}}
+
+/* ================= minimap ================= */
+const mm=$('minimap'),mx=mm.getContext('2d');const MMC={x:-14,z:0,half:44};let mmBase=null;
+function w2m(x,z){return [(x-MMC.x+MMC.half)/(2*MMC.half)*360,(z-MMC.z+MMC.half)/(2*MMC.half)*360];}
+function buildMinimapBase(){const img=mx.createImageData(360,360);
+  for(let j=0;j<360;j++)for(let i=0;i<360;i++){const x=MMC.x-MMC.half+i/360*2*MMC.half,z=MMC.z-MMC.half+j/360*2*MMC.half;const h=height(x,z);let r,g,b;
+    if(h<-.1){r=60;g=125;b=165;}else{const k=clamp(h/3,0,1);r=lerp(176,150,k);g=lerp(196,120,k);b=lerp(110,80,k);}
+    const o=(j*360+i)*4;img.data[o]=r;img.data[o+1]=g;img.data[o+2]=b;img.data[o+3]=255;}
+  const c=document.createElement('canvas');c.width=c.height=360;c.getContext('2d').putImageData(img,0,0);mmBase=c;}
+function drawMinimap(t,target){const c=mx;c.save();c.clearRect(0,0,360,360);c.beginPath();c.arc(180,180,180,0,7);c.clip();c.drawImage(mmBase,0,0);
+  c.fillStyle='#3c7da5';for(const p of ponds)if(t>=p.year){const [a,b]=w2m(p.x-p.w/2,p.z-p.d/2);c.fillRect(a,b,p.w*4.1,p.d*4.1);}
+  if(t>=1458){const [a,b]=w2m(DS.x-DS.hw,DS.z-DS.hd);c.fillRect(a,b,DS.hw*8.2,DS.hd*8.2);}
+  c.strokeStyle='rgba(120,90,60,.8)';c.lineWidth=1.5;for(const r of ROADS){if(t<r.year)continue;const f=clamp((t-r.year)/r.span,0,1);const n=Math.floor(r.P.length*f);c.beginPath();for(let i=0;i<n;i++){const [a,b]=w2m(r.P[i][0],r.P[i][1]);i?c.lineTo(a,b):c.moveTo(a,b);}c.stroke();}
+  for(const L of lots){if(L.k<0)continue;const s=L.stages[L.k];c.fillStyle=s.style==='modern'||s.style==='concrete'?'#f0a24a':s.style==='ruin'?'#8a5a48':s.style==='monastic'?'#b5553a':'#e2894a';const [a,b]=w2m(L.x,L.z);c.fillRect(a-1.5,b-1.5,3,3);}
+  // view cone
+  const [cx,cz]=w2m(camera.position.x,camera.position.z),[tx,tz]=w2m(target.x,target.z);const ang=Math.atan2(tz-cz,tx-cx),len=Math.max(60,Math.hypot(tx-cx,tz-cz)*1.7);
+  c.fillStyle='rgba(255,255,255,.28)';c.beginPath();c.moveTo(cx,cz);c.lineTo(cx+len*Math.cos(ang-.34),cz+len*Math.sin(ang-.34));c.lineTo(cx+len*Math.cos(ang+.34),cz+len*Math.sin(ang+.34));c.closePath();c.fill();
+  c.fillStyle='#fff';c.beginPath();c.arc(cx,cz,6,0,7);c.fill();c.restore();
+  c.fillStyle='#222';c.beginPath();c.arc(180,22,15,0,7);c.fill();c.fillStyle='#fff';c.font='bold 18px Georgia';c.textAlign='center';c.textBaseline='middle';c.fillText('N',180,23);}
+
+/* ================= camera director ================= */
+const target=new THREE.Vector3(),want=new THREE.Vector3();let az=.75,el=.6,dist=26,autoCam=true,evFocus=null;
+function baseFocus(y){const k=smooth(1250,1470,y);const cityN=Math.min(1,popAt(Math.max(y,1300))/440000);
+  want.set(lerp(LM.shalban.x+1,CEN.x-1,k),0,lerp(LM.shalban.z-1,CEN.z-1.5,k));
+  return lerp(34,24+30*Math.sqrt(cityN),k);}
+controls.addEventListener('start',()=>{if(autoCam){autoCam=false;$('camBtn').classList.remove('on');}});
+
+/* ================= main loop ================= */
+let simT=0,playing=false,speed=1,lastY=-1,nextEv=0,frame=0,capTimer=0;
+const clock=new THREE.Clock();
+function showCaption(e){$('capY').textContent=e.c;$('capT').textContent=e.t;$('capX').textContent=e.x;$('caption').classList.add('on');clearTimeout(capTimer);capTimer=setTimeout(()=>$('caption').classList.remove('on'),6500/Math.sqrt(speed));
+  const p=evPos(e.at);evFocus={x:p.x,z:p.z,until:performance.now()+5200/Math.sqrt(speed)};}
+function resetEvents(){const y=yearAt(simT);nextEv=EV.findIndex(e=>e.y>y+.01);if(nextEv<0)nextEv=EV.length;}
+function frameUpdate(dt){
+  if(playing){simT+=dt*speed;if(simT>=TOTAL){simT=TOTAL;setPlaying(false);}$('scrub').value=simT;}
+  const y=yearAt(simT),span=Math.max(1.2,ypsAt(Math.min(simT,TOTAL-2.01))*.7);
+  if(y!==lastY){updateBuildings(y,span);updateTrees(y,span);updatePonds(y,span);updateRoads(y);updateLandmarks(y,span);updateHUD(y);lastY=y;}
+  if(playing)while(nextEv<EV.length&&EV[nextEv].y<=y){showCaption(EV[nextEv]);nextEv++;}
+  // camera
+  const now=performance.now();let wd=baseFocus(y);
+  if(evFocus&&now<evFocus.until){want.set(evFocus.x,0,evFocus.z);wd=Math.min(wd,26);}
+  want.y=Math.max(0,height(want.x,want.z));
+  if(autoCam){const k=1-Math.exp(-dt*1.1);target.lerp(want,k);dist=lerp(dist,wd,k);az+=dt*(playing?.045:.012);
+    camera.position.set(target.x+dist*Math.cos(el)*Math.sin(az),target.y+dist*Math.sin(el),target.z+dist*Math.cos(el)*Math.cos(az));camera.lookAt(target);controls.target.copy(target);}
+  else{controls.update();target.copy(controls.target);}
+  const ct=controls.target;sun.position.set(ct.x+22,34,ct.z+14);sun.target.position.copy(ct);const sc=sun.shadow.camera,ex=Math.max(18,camera.position.distanceTo(ct)*.9);
+  if(sc.right!==ex){sc.left=-ex;sc.right=ex;sc.top=ex;sc.bottom=-ex;sc.near=1;sc.far=110;sc.updateProjectionMatrix();}
+  // labels
+  const show=$('lblBtn').classList.contains('on');const w=innerWidth,h=innerHeight;const v=new THREE.Vector3();
+  for(const L of labels){const on=show&&y>=L.year&&y<L.until;if(!on){L.el.style.opacity=0;continue;}
+    if(L.dyn){const tx=L.dyn(y);if(L.el.textContent!==tx)L.el.textContent=tx;}
+    v.copy(L.pos).project(camera);const d=camera.position.distanceTo(L.pos);
+    if(v.z>1||Math.abs(v.x)>.95||(1-v.y)/2*h<130||(1-v.y)/2*h>h-90||d>95){L.el.style.opacity=0;continue;}
+    L.el.style.opacity=1;L.el.style.left=((v.x+1)/2*w)+'px';L.el.style.top=((1-v.y)/2*h)+'px';}
+  if(frame++%6===0)drawMinimap(y,ct);
+  $('ticks').style.setProperty('--x','0');
+}
+function loop(){const dt=Math.min(clock.getDelta(),.1);frameUpdate(dt);renderer.render(scene,camera);requestAnimationFrame(loop);}
+
+/* ================= UI ================= */
+function setPlaying(p){playing=p;$('play').textContent=p?'❚❚':'▶';if(p&&simT>=TOTAL){simT=0;lastY=-1;resetEvents();}}
+$('play').onclick=()=>setPlaying(!playing);
+addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'&&e.target.tagName!=='BUTTON'){e.preventDefault();setPlaying(!playing);}});
+$('scrub').addEventListener('input',e=>{simT=+e.target.value;resetEvents();$('caption').classList.remove('on');evFocus=null;});
+document.querySelectorAll('#speed button').forEach(b=>b.onclick=()=>{speed=+b.dataset.s;document.querySelectorAll('#speed button').forEach(x=>x.classList.toggle('on',x===b));});
+$('camBtn').onclick=()=>{autoCam=!autoCam;$('camBtn').classList.toggle('on',autoCam);
+  if(autoCam){const d=camera.position.clone().sub(controls.target);dist=d.length();el=clamp(Math.asin(d.y/dist),.25,1.2);az=Math.atan2(d.x,d.z);target.copy(controls.target);}};
+$('lblBtn').onclick=()=>$('lblBtn').classList.toggle('on');
+$('infoBtn').onclick=()=>{$('info').style.display='grid';};
+$('infoClose').onclick=()=>{$('info').style.display='none';};
+$('info').onclick=e=>{if(e.target.id==='info')$('info').style.display='none';};
+function buildTicks(){const tk=$('ticks');const marks=[[600,'600'],[1000,'1000'],[1458,'1458'],[1765,'1765'],[1947,'1947'],[1971,'1971'],[2026,'2026']];
+  for(const [y,l] of marks){const p=100*sAtYear(y)/TOTAL;const s=document.createElement('span');s.style.left=p+'%';tk.appendChild(s);const b=document.createElement('b');b.style.left=p+'%';b.textContent=l;tk.appendChild(b);}}
+
+/* ================= boot ================= */
+function boot(){
+  buildTerrain();buildRoads();buildPonds();buildLots();buildLandmarks();buildTrees();buildLabels();buildMinimapBase();buildTicks();
+  const y=yearAt(0);want.set(0,0,0);dist=baseFocus(y);target.copy(want);target.y=height(target.x,target.z);
+  resetEvents();loop();
+  const sb=$('startBtn');sb.disabled=false;sb.textContent='▶  Play';
+  sb.onclick=()=>{$('intro').style.display='none';setPlaying(true);};
+  window.__cumilla={lots:lots.length,trees:trees.length,ponds:ponds.length,seek:s=>{simT=s;resetEvents();},yearAt};
+}
+setTimeout(boot,30);
+})();
+</script>
+</body>
+</html>
